@@ -1,0 +1,12 @@
+# frontend
+travel-frontend/node_modules/
+travel-frontend/build/
+travel-frontend/.env
+
+# backend
+travel-backend/node_modules/
+travel-backend/.env
+
+# general
+.env
+*.log
