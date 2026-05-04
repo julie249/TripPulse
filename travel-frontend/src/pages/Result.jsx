@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import MapView from "../components/MapView";
 import {
   ArrowLeft,
   CalendarDays,
@@ -95,6 +96,15 @@ export default function Result() {
 
     fetchWeather();
   }, [destination]);
+
+  const mapPlaces =
+    trip?.days?.flatMap((day) =>
+      day.places?.map((p) => ({
+        name: p.name,
+        lat: Number(p.lat),
+        lng: Number(p.lng),
+      }))
+    ) || [];
 
   const downloadPDF = async () => {
     if (!pdfRef.current) return;
@@ -214,16 +224,8 @@ export default function Result() {
 
         <div className="grid lg:grid-cols-2 gap-6 mb-6">
           <div>
-            <h2 className="text-xl font-bold mb-3">🗺️ Trip Map</h2>
-
-            <iframe
-              title="trip-map"
-              className="w-full h-72 rounded-xl border-0"
-              loading="lazy"
-              src={`https://www.google.com/maps?q=${encodeURIComponent(
-                trip.destination
-              )}&output=embed`}
-            />
+            <h2 className="text-xl font-bold mb-3">🗺️ Itinerary Map</h2>
+            <MapView places={mapPlaces} />
           </div>
 
           <div>
@@ -305,6 +307,17 @@ export default function Result() {
               <p className="text-sm">🍜 {item.food?.join(", ")}</p>
               <p className="text-sm mt-2">🏨 {item.hotel}</p>
               <p className="text-sm mt-2">💡 {item.tips}</p>
+
+              {item.places?.[0] && (
+                <a
+                  href={`https://www.google.com/maps?q=${item.places[0].lat},${item.places[0].lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-3 text-blue-200 hover:text-white text-sm underline"
+                >
+                  Open Day {item.day} on Maps →
+                </a>
+              )}
             </div>
           ))}
         </div>
