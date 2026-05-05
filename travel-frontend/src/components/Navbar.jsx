@@ -8,17 +8,32 @@ import {
   User,
   Sparkles,
   Compass,
+  LogOut,
+  LogIn,
 } from "lucide-react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
+  let user = null;
+
+  try {
+    user = JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    user = null;
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setOpen(false);
+    window.location.href = "/login";
+  };
+
   return (
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-indigo-100 shadow-sm px-5 md:px-8 py-4">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-
-        {/* LOGO */}
         <Link to="/" className="flex items-center gap-3 group">
           <motion.div
             whileHover={{ rotate: 12, scale: 1.1 }}
@@ -30,7 +45,7 @@ export default function Navbar() {
 
           <div>
             <h1 className="text-xl md:text-2xl font-extrabold bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-              TripPulse 
+              TripPulse
             </h1>
             <p className="text-xs text-gray-500 -mt-1">
               Smart Travel Planner
@@ -38,7 +53,6 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* DESKTOP MENU */}
         <div className="hidden md:flex items-center gap-7 font-medium">
           <NavItem to="/" label="Home" current={location.pathname} />
           <NavItem to="/plan" label="Plan Trip" current={location.pathname} />
@@ -47,15 +61,38 @@ export default function Navbar() {
           <NavItem to="/contact" label="Contact" current={location.pathname} />
           <NavItem to="/chat" label="AI Chat" current={location.pathname} />
 
-          <Link to="/profile">
-            <motion.div
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-indigo-50 border border-indigo-100 p-2.5 rounded-full shadow-sm"
+          {user ? (
+            <div className="flex items-center gap-3">
+              <Link to="/profile">
+                <motion.div
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-full shadow-sm"
+                >
+                  <User className="text-indigo-600 w-5 h-5" />
+                  <span className="text-sm text-indigo-700 font-semibold">
+                    {user?.name || "User"}
+                  </span>
+                </motion.div>
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-full shadow hover:bg-red-600 hover:scale-105 transition"
+              >
+                <LogOut size={17} />
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-full shadow hover:bg-indigo-700 hover:scale-105 transition"
             >
-              <User className="text-indigo-600 w-5 h-5" />
-            </motion.div>
-          </Link>
+              <LogIn size={17} />
+              Login
+            </Link>
+          )}
 
           <Link
             to="/plan"
@@ -66,7 +103,6 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* MOBILE BUTTON */}
         <button
           className="md:hidden bg-indigo-50 p-2 rounded-xl text-indigo-700"
           onClick={() => setOpen(!open)}
@@ -74,7 +110,6 @@ export default function Navbar() {
           {open ? <X size={26} /> : <Menu size={26} />}
         </button>
 
-        {/* MOBILE MENU */}
         <AnimatePresence>
           {open && (
             <motion.div
@@ -90,7 +125,26 @@ export default function Navbar() {
               <MobileItem to="/about" label="About" setOpen={setOpen} />
               <MobileItem to="/contact" label="Contact" setOpen={setOpen} />
               <MobileItem to="/chat" label="AI Chat 🧠" setOpen={setOpen} />
-              <MobileItem to="/profile" label="Profile 👤" setOpen={setOpen} />
+
+              {user ? (
+                <>
+                  <MobileItem
+                    to="/profile"
+                    label={`Profile 👤 ${user?.name || "User"}`}
+                    setOpen={setOpen}
+                  />
+
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 bg-red-500 text-white px-7 py-2.5 rounded-full shadow-lg"
+                  >
+                    <LogOut size={18} />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <MobileItem to="/login" label="Login 🔐" setOpen={setOpen} />
+              )}
 
               <Link
                 to="/plan"

@@ -8,3 +8,14 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
+
+// import React from "react";
+// import { createRoot } from "react-dom/client";
+// import "./index.css";
+
+// createRoot(document.getElementById("root")).render(
+//   <h1 style={{ color: "red", fontSize: "50px" }}>
+//     React is working
+//   </h1>
+// );
