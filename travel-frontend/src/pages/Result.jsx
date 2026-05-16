@@ -10,6 +10,9 @@ import {
   Star,
   Wind,
   Droplets,
+  Backpack,
+  ShieldCheck,
+  Clock,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -161,15 +164,50 @@ export default function Result() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white bg-gradient-to-br from-indigo-900 via-blue-900 to-purple-900">
-        <div className="text-center">
-          <div className="text-5xl mb-4 animate-bounce">✈️</div>
-          <p className="text-xl font-semibold">Generating your travel plan...</p>
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-900 text-white px-6">
+      <div className="max-w-xl w-full text-center">
+
+        <div className="text-7xl mb-8 animate-bounce">
+          ✈️
         </div>
+
+        <h1 className="text-4xl font-extrabold mb-4">
+          TripPulse AI
+        </h1>
+
+        <p className="text-gray-300 mb-8">
+          Creating your personalized AI travel experience...
+        </p>
+
+        <div className="space-y-4 text-left">
+
+          <div className="bg-white/10 backdrop-blur p-4 rounded-2xl animate-pulse">
+            🌍 Analyzing destination and travel preferences...
+          </div>
+
+          <div className="bg-white/10 backdrop-blur p-4 rounded-2xl animate-pulse delay-100">
+            📍 Planning day-wise itinerary...
+          </div>
+
+          <div className="bg-white/10 backdrop-blur p-4 rounded-2xl animate-pulse delay-200">
+            🍜 Finding food and hotel recommendations...
+          </div>
+
+          <div className="bg-white/10 backdrop-blur p-4 rounded-2xl animate-pulse delay-300">
+            💰 Estimating smart budget breakdown...
+          </div>
+
+          <div className="bg-white/10 backdrop-blur p-4 rounded-2xl animate-pulse delay-500">
+            🤖 Preparing your AI travel plan...
+          </div>
+
+        </div>
+
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   if (error) {
     return (
@@ -294,14 +332,59 @@ export default function Result() {
           </div>
         </div>
 
-        {trip?.budget_breakdown && (
-          <div className="bg-white/10 p-4 rounded-xl mb-6">
-            <h2 className="text-xl font-bold mb-2">💰 Budget Breakdown</h2>
-            <p>Stay: {trip.budget_breakdown.stay}</p>
-            <p>Food: {trip.budget_breakdown.food}</p>
-            <p>Travel: {trip.budget_breakdown.travel}</p>
-          </div>
-        )}
+        {/* 🎒 AI PACKING CHECKLIST */}
+{trip?.packing && trip.packing.length > 0 && (
+  <div className="bg-white/10 p-5 rounded-2xl backdrop-blur mb-6">
+    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+      <Backpack /> AI Packing Checklist
+    </h2>
+
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {trip.packing.map((item, index) => (
+        <div
+          key={index}
+          className="bg-white/10 p-4 rounded-xl border border-white/10 hover:bg-white/20 transition"
+        >
+          <p className="flex items-center gap-2 text-sm">
+            🎒 {item}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+{/* 🛡️ AI SAFETY TIPS */}
+{trip?.safety_tips && trip.safety_tips.length > 0 && (
+  <div className="bg-white/10 p-5 rounded-2xl backdrop-blur mb-6">
+    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+      <ShieldCheck /> AI Safety Tips
+    </h2>
+
+    <div className="grid md:grid-cols-2 gap-4">
+      {trip.safety_tips.map((tip, index) => (
+        <div
+          key={index}
+          className="bg-white/10 p-4 rounded-xl border border-white/10 hover:bg-white/20 transition"
+        >
+          🛡️ {tip}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+{/* ⏰ BEST TIME TO VISIT */}
+{trip?.best_time_to_visit && (
+  <div className="bg-gradient-to-r from-pink-500/20 to-orange-500/20 p-5 rounded-2xl backdrop-blur mb-6 border border-white/10">
+    <h2 className="text-2xl font-bold mb-3 flex items-center gap-2">
+      <Clock /> Best Time to Visit
+    </h2>
+
+    <p className="text-gray-200 leading-relaxed">
+      {trip.best_time_to_visit}
+    </p>
+  </div>
+)}
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {trip.days.map((item, i) => (
@@ -315,9 +398,31 @@ export default function Result() {
                 📍 {item.places?.map((p) => p.name).join(", ")}
               </p>
 
-              <p className="text-sm">🍜 {item.food?.join(", ")}</p>
-              <p className="text-sm mt-2">🏨 {item.hotel}</p>
-              <p className="text-sm mt-2">💡 {item.tips}</p>
+              <div className="mt-4 space-y-3">
+  <div className="bg-white/10 p-3 rounded-xl">
+    <h3 className="font-semibold mb-2">🍜 AI Food Suggestions</h3>
+    <div className="flex flex-wrap gap-2">
+      {item.food?.map((food, index) => (
+        <span
+          key={index}
+          className="bg-orange-400/20 px-3 py-1 rounded-full text-xs"
+        >
+          {food}
+        </span>
+      ))}
+    </div>
+  </div>
+
+  <div className="bg-white/10 p-3 rounded-xl">
+    <h3 className="font-semibold mb-1">🏨 AI Hotel Suggestion</h3>
+    <p className="text-sm text-gray-200">{item.hotel}</p>
+  </div>
+
+  <div className="bg-white/10 p-3 rounded-xl">
+    <h3 className="font-semibold mb-1">💡 Smart Travel Tip</h3>
+    <p className="text-sm text-gray-200">{item.tips}</p>
+  </div>
+</div>
 
               {item.places?.[0] && (
                 <a

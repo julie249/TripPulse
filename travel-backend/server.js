@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import Groq from "groq-sdk";
+import { GoogleGenAI } from "@google/genai";
 
 import { connectDB } from "./db.js";
 import Trip from "./models/Trip.js";
@@ -11,76 +13,54 @@ import { protect } from "./middleware/auth.js";
 
 dotenv.config();
 
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-connectDB();
-
-/*
-// GEMINI SETUP - enable later when quota is available
-
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
-*/
-
-// 🧠 TRIP GENERATOR - MOCK VERSION
+// AI TRIP GENERATOR - GROQ
 app.post("/generate-trip", async (req, res) => {
-  const { destination, days, budget } = req.body;
-
-  if (!destination || !days || !budget) {
-    return res.status(400).json({
-      error: "Destination, days and budget are required",
-    });
-  }
-
-  const mockPlan = {
-    destination,
-    days: Array.from({ length: Number(days) }, (_, i) => ({
-      day: i + 1,
-      places: [
-        {
-          name: `${destination} Place ${i + 1}`,
-          lat: 28.61 + i * 0.01,
-          lng: 77.2 + i * 0.01,
-        },
-      ],
-      food: ["Local Food", "Street Food"],
-      hotel: "3★ Hotel nearby",
-      tips: "Start early and stay hydrated.",
-    })),
-    budget_breakdown: {
-      stay: "40%",
-      food: "30%",
-      travel: "30%",
-    },
-  };
-
-  res.json(mockPlan);
-});
-
-/*
-// 🧠 TRIP GENERATOR - GEMINI VERSION
-app.post("/generate-trip", async (req, res) => {
-  const { destination, days, budget } = req.body;
-
   try {
+    const { destination, days, budget, travelers } = req.body;
+
+    if (!destination || !days || !budget) {
+      return res.status(400).json({
+        error: "Destination, days and budget are required",
+      });
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({
+        error: "Groq API key is missing",
+      });
+    }
+
     const prompt = `
-You are a professional travel planner AI.
+You are an advanced AI travel planner.
+
+Create a realistic, detailed, and unique ${days}-day itinerary for ${destination} within ₹${budget} budget for ${travelers || 1} travelers.
+
+IMPORTANT RULES:
+- Every day must contain DIFFERENT places.
+- Mention REAL famous tourist places of the destination.
+- Suggest REAL local food.
+- Suggest REAL hotel types.
+- Give realistic travel tips.
+- Include latitude and longitude for places.
+- Make itinerary practical and non-repetitive.
+- Keep food, hotel, and tips different every day.
 
 Return ONLY valid JSON. No markdown. No explanation.
 
-Create a ${days}-day travel itinerary for ${destination} within ₹${budget} budget.
-
-IMPORTANT:
-- Include latitude and longitude for each place
-- Output must be valid JSON only
-
-FORMAT:
+JSON FORMAT:
 {
   "destination": "${destination}",
   "days": [
@@ -88,43 +68,54 @@ FORMAT:
       "day": 1,
       "places": [
         {
-          "name": "Place Name",
+          "name": "Real Place Name",
           "lat": 0.0,
           "lng": 0.0
         }
       ],
-      "food": ["food1", "food2"],
-      "hotel": "hotel suggestion",
-      "tips": "travel tips"
+      "food": ["real food1", "real food2"],
+      "hotel": "real hotel suggestion",
+      "tips": "real travel tips"
     }
   ],
   "budget_breakdown": {
     "stay": "",
     "food": "",
     "travel": ""
-  }
+  },
+  "packing": ["item1", "item2"],
+  "best_time_to_visit": "",
+  "safety_tips": ["tip1", "tip2"]
 }
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.8,
     });
 
-    let raw = response.text;
+    let raw = completion.choices[0]?.message?.content || "";
     raw = raw.replace(/```json/g, "").replace(/```/g, "").trim();
 
-    const plan = JSON.parse(raw);
+    const tripPlan = JSON.parse(raw);
 
-    res.json(plan);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Gemini trip generation failed" });
+    res.json(tripPlan);
+  } catch (err) {
+    console.log("Groq AI Error:", err.message);
+
+    res.status(500).json({
+      error: "AI trip generation failed",
+    });
   }
 });
-*/
 
-// 🔐 REGISTER
+// REGISTER
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -166,7 +157,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// 🔐 LOGIN
+// LOGIN
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -193,11 +184,9 @@ app.post("/login", async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     res.json({
       message: "Login successful",
@@ -215,7 +204,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// 💾 SAVE TRIP - USER SPECIFIC
+// SAVE TRIP
 app.post("/save-trip", protect, async (req, res) => {
   try {
     const { destination, days, budget, trip } = req.body;
@@ -248,7 +237,7 @@ app.post("/save-trip", protect, async (req, res) => {
   }
 });
 
-// 📥 GET SAVED TRIPS - LOGGED-IN USER ONLY
+// GET SAVED TRIPS
 app.get("/get-trips", protect, async (req, res) => {
   try {
     const trips = await Trip.find({ user: req.user.id }).sort({
@@ -263,7 +252,7 @@ app.get("/get-trips", protect, async (req, res) => {
   }
 });
 
-// 🗑️ DELETE TRIP - ONLY OWNER CAN DELETE
+// DELETE TRIP
 app.delete("/delete-trip/:id", protect, async (req, res) => {
   try {
     const trip = await Trip.findOne({
@@ -289,7 +278,7 @@ app.delete("/delete-trip/:id", protect, async (req, res) => {
   }
 });
 
-// 🌦️ WEATHER
+// WEATHER
 app.get("/weather", async (req, res) => {
   const { city } = req.query;
 
@@ -329,41 +318,77 @@ app.get("/weather", async (req, res) => {
   }
 });
 
-// 🧠 CHAT - MOCK VERSION
+// AI CHAT - GEMINI WITH FALLBACK
 app.post("/chat", async (req, res) => {
   const { message } = req.body;
 
-  res.json({
-    reply: `Demo travel assistant: For "${message}", I suggest checking weather, budget, local food, and nearby attractions before finalizing your plan.`,
-  });
-});
+  if (!message) {
+    return res.status(400).json({
+      error: "Message is required",
+    });
+  }
 
-/*
-// 🧠 CHAT - GEMINI VERSION
-app.post("/chat", async (req, res) => {
-  const { message } = req.body;
+  const lowerMessage = message.toLowerCase();
+
+  const fallbackReply = () => {
+    if (lowerMessage.includes("goa")) {
+      return "Best time to visit Goa is November to February. The weather is pleasant, beaches are active, and water sports are available. Avoid Christmas/New Year if you want a lower budget.";
+    }
+
+    if (lowerMessage.includes("budget") || lowerMessage.includes("cheap")) {
+      return "To reduce travel budget: book tickets early, travel off-season, use public transport, choose hostels/budget hotels, and set a daily spending limit.";
+    }
+
+    if (lowerMessage.includes("pack") || lowerMessage.includes("packing")) {
+      return "Pack ID proof, charger, power bank, medicines, comfortable shoes, weather-based clothes, sunscreen, water bottle, and basic toiletries.";
+    }
+
+    if (lowerMessage.includes("food")) {
+      return "Try local food of your destination. For Goa, try fish curry, bebinca, poi bread, prawn balchao, and seafood. Check hygiene and reviews before eating.";
+    }
+
+    if (lowerMessage.includes("weather")) {
+      return "Before travel, check temperature, rainfall, and local alerts. Carry sunscreen for hot places, umbrella for rainy areas, and warm clothes for hill stations.";
+    }
+
+    return `For "${message}", plan your trip by checking weather, budget, transport, hotel location, safety, food options, and nearby attractions.`;
+  };
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: `
-You are a travel assistant AI.
-Give short, helpful travel advice.
+    if (!process.env.GEMINI_API_KEY) {
+      return res.json({
+        reply: fallbackReply(),
+      });
+    }
+
+    const prompt = `
+You are TripPulse AI, a smart travel assistant.
+Answer in 3 short bullet points only.
 
 User question: ${message}
-`,
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
     });
 
-    res.json({
+    return res.json({
       reply: response.text,
     });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Gemini chat failed" });
+    console.log("Gemini Chat Error:", err.message);
+
+    return res.json({
+      reply: fallbackReply(),
+    });
   }
 });
-*/
 
-app.listen(5000, () => {
-  console.log("🚀 Server running on port 5000");
+const PORT = process.env.PORT || 5000;
+
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
 });

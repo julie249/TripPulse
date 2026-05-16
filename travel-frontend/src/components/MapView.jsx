@@ -1,77 +1,97 @@
 import React, { useMemo } from "react";
-import {
-  GoogleMap,
-  useLoadScript,
-  Marker,
-  InfoWindow,
-} from "@react-google-maps/api";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
-const containerStyle = {
-  width: "100%",
-  height: "350px",
-};
+const defaultCenter = [28.6139, 77.209];
+
+const markerIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 
 export default function MapView({ places = [] }) {
-  const [selected, setSelected] = React.useState(null);
-
-  const { isLoaded } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-  });
-
-  // 📍 Dynamic center (first place)
-  const center = useMemo(() => {
-    if (places.length > 0) {
-      return {
-        lat: places[0].lat,
-        lng: places[0].lng,
-      };
-    }
-    return { lat: 28.6139, lng: 77.209 };
+  const validPlaces = useMemo(() => {
+    return places
+      .map((place) => ({
+        ...place,
+        lat: Number(place.lat),
+        lng: Number(place.lng),
+      }))
+      .filter(
+        (place) =>
+          place.name &&
+          !Number.isNaN(place.lat) &&
+          !Number.isNaN(place.lng) &&
+          place.lat >= -90 &&
+          place.lat <= 90 &&
+          place.lng >= -180 &&
+          place.lng <= 180
+      );
   }, [places]);
 
-  if (!isLoaded) {
+  const center =
+    validPlaces.length > 0
+      ? [validPlaces[0].lat, validPlaces[0].lng]
+      : defaultCenter;
+
+  const routePositions = validPlaces.map((place) => [place.lat, place.lng]);
+
+  if (validPlaces.length === 0) {
     return (
-      <div className="text-white text-center py-10">
-        🗺️ Loading Map...
+      <div className="h-[350px] rounded-2xl bg-white/10 flex items-center justify-center text-center p-6">
+        <p className="text-gray-200">
+          No valid map locations available for this trip.
+        </p>
       </div>
     );
   }
 
   return (
-    <GoogleMap
-      mapContainerStyle={containerStyle}
-      zoom={6}
-      center={center}
-    >
-      {places.map((place, i) => (
-        <Marker
-          key={i}
-          position={{
-            lat: place.lat,
-            lng: place.lng,
-          }}
-          onClick={() => setSelected(place)}
-          label={{
-            text: `${i + 1}`,
-            color: "white",
-          }}
+    <div className="h-[350px] rounded-2xl overflow-hidden">
+      <MapContainer
+        center={center}
+        zoom={11}
+        scrollWheelZoom={false}
+        className="h-full w-full"
+      >
+        <TileLayer
+          attribution='&copy; OpenStreetMap contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-      ))}
 
-      {selected && (
-        <InfoWindow
-          position={{
-            lat: selected.lat,
-            lng: selected.lng,
-          }}
-          onCloseClick={() => setSelected(null)}
-        >
-          <div className="text-black">
-            <h3 className="font-bold">{selected.name}</h3>
-            <p>📍 Explore this place</p>
-          </div>
-        </InfoWindow>
-      )}
-    </GoogleMap>
+        {routePositions.length > 1 && (
+          <Polyline positions={routePositions} />
+        )}
+
+        {validPlaces.map((place, index) => (
+          <Marker
+            key={`${place.name}-${index}`}
+            position={[place.lat, place.lng]}
+            icon={markerIcon}
+          >
+            <Popup>
+              <div>
+                <strong>
+                  {index + 1}. {place.name}
+                </strong>
+                <br />
+                AI recommended stop
+                <br />
+                <a
+                  href={`https://www.google.com/maps?q=${place.lat},${place.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Open in Google Maps
+                </a>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
   );
 }
