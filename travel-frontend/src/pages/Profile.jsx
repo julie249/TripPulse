@@ -37,7 +37,7 @@ export default function Profile() {
 
     const fetchTrips = async () => {
       try {
-        const res = await fetch("http://localhost:5000/get-trips", {
+        const res = await fetch("https://trippulse-11nu.onrender.com/get-trips", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

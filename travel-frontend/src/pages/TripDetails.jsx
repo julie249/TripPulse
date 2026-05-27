@@ -34,7 +34,7 @@ export default function TripDetails() {
     const fetchWeather = async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/weather?city=${trip.destination}`
+          `https://trippulse-11nu.onrender.com/weather?city=${trip.destination}`
         );
 
         const data = await res.json();

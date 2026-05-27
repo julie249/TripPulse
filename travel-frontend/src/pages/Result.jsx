@@ -41,7 +41,7 @@ export default function Result() {
 
     const generateTrip = async () => {
       try {
-        const res = await fetch("http://localhost:5000/generate-trip", {
+        const res = await fetch("https://trippulse-11nu.onrender.com/generate-trip", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ destination, days, budget }),
@@ -79,7 +79,7 @@ export default function Result() {
         setWeatherLoading(true);
 
         const res = await fetch(
-          `http://localhost:5000/weather?city=${encodeURIComponent(destination)}`
+          `https://trippulse-11nu.onrender.com/weather?city=${encodeURIComponent(destination)}`
         );
 
         const data = await res.json();
@@ -135,7 +135,7 @@ export default function Result() {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/save-trip", {
+      const res = await fetch("https://trippulse-11nu.onrender.com/save-trip", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

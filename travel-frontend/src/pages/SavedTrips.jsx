@@ -37,7 +37,7 @@ export default function SavedTrips() {
       }
 
       try {
-        const res = await fetch("http://localhost:5000/get-trips", {
+        const res = await fetch("https://trippulse-11nu.onrender.com/get-trips", {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -73,7 +73,7 @@ export default function SavedTrips() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/delete-trip/${id}`, {
+      const res = await fetch(`https://trippulse-11nu.onrender.com/delete-trip/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

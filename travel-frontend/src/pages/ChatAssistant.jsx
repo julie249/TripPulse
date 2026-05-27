@@ -25,7 +25,7 @@ export default function ChatAssistant() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/chat", {
+      const res = await fetch("https://trippulse-11nu.onrender.com/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
